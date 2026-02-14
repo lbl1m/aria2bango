@@ -13,11 +13,12 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/lbls/aria2bango/internal/aria2"
-	"github.com/lbls/aria2bango/internal/config"
-	"github.com/lbls/aria2bango/internal/detector"
-	"github.com/lbls/aria2bango/internal/firewall"
-	"github.com/lbls/aria2bango/internal/logger"
+	"github.com/lbl1m/aria2bango/internal/aria2"
+	"github.com/lbl1m/aria2bango/internal/config"
+	"github.com/lbl1m/aria2bango/internal/detector"
+	"github.com/lbl1m/aria2bango/internal/firewall"
+	"github.com/lbl1m/aria2bango/internal/logger"
+	"github.com/lbl1m/aria2bango/internal/peerid"
 )
 
 var (
@@ -163,7 +164,7 @@ func monitorPeers(ctx context.Context, aria2Client *aria2.Client, det *detector.
 			if err := blockLogger.LogBlock(logger.BlockEvent{
 				IP:            peer.IP,
 				PeerID:        peer.PeerID,
-				ClientName:    "Unknown",
+				ClientName:    peerid.GetNameWithVersion(peer.PeerID),
 				Reason:        result.Reason,
 				Duration:      result.BlockDuration.String(),
 				DownloadSpeed: peer.DownloadSpeed,

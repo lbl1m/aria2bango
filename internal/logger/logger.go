@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lbls/aria2bango/internal/config"
+	"github.com/lbl1m/aria2bango/internal/config"
 )
 
 // BlockEvent represents a block event for logging

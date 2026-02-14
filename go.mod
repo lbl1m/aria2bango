@@ -1,4 +1,4 @@
-module github.com/lbls/aria2bango
+module github.com/lbl1m/aria2bango
 
 go 1.21
 

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lbls/aria2bango/internal/aria2"
-	"github.com/lbls/aria2bango/internal/config"
+	"github.com/lbl1m/aria2bango/internal/aria2"
+	"github.com/lbl1m/aria2bango/internal/config"
 )
 
 // DetectionResult represents a detection result
@@ -34,6 +34,7 @@ type PeerStats struct {
 	LastSeen      time.Time
 	Violations    int       // 违规次数（累加惩罚）
 	LastBlocked   time.Time // 上次屏蔽时间
+	BlockedUntil  time.Time // 屏蔽到期时间
 }
 
 // NewDetector creates a new detector
@@ -77,6 +78,12 @@ func (d *Detector) analyzeBehavior(peer aria2.Peer, baseBlockDuration time.Durat
 	stats.TotalUpload += peer.UploadSpeed     // peer's download (what they take from us)
 	stats.LastSeen = time.Now()
 
+	// Check if already blocked
+	if !stats.BlockedUntil.IsZero() && time.Now().Before(stats.BlockedUntil) {
+		// Already blocked, skip
+		return nil
+	}
+
 	// Check if we have enough data
 	if stats.TotalUpload < d.config.Behavior.MinDataThreshold {
 		return nil
@@ -100,6 +107,7 @@ func (d *Detector) analyzeBehavior(peer aria2.Peer, baseBlockDuration time.Durat
 		// e.g., 1st: 1*5min, 2nd: 2*5min, 3rd: 3*5min
 		blockDuration := time.Duration(stats.Violations) * baseBlockDuration
 		stats.LastBlocked = time.Now()
+		stats.BlockedUntil = time.Now().Add(blockDuration)
 
 		return &DetectionResult{
 			Peer:          peer,
@@ -108,6 +116,14 @@ func (d *Detector) analyzeBehavior(peer aria2.Peer, baseBlockDuration time.Durat
 			Violations:    stats.Violations,
 			BlockDuration: blockDuration,
 		}
+	}
+
+	// Share ratio is normal - check if we should reset violations
+	// If previously blocked and now share ratio is normal, reset violations
+	// This gives the peer a fresh start
+	if stats.Violations > 0 && !stats.BlockedUntil.IsZero() && time.Now().After(stats.BlockedUntil) {
+		stats.Violations = 0
+		stats.BlockedUntil = time.Time{} // Clear block time
 	}
 
 	return nil
@@ -129,6 +145,7 @@ func (d *Detector) ResetViolations(ip string) {
 	defer d.statsMutex.Unlock()
 	if stats, exists := d.peerStats[ip]; exists {
 		stats.Violations = 0
+		stats.BlockedUntil = time.Time{} // Clear block time
 	}
 }
 
@@ -161,4 +178,14 @@ func (d *Detector) GetAllStats() map[string]*PeerStats {
 		result[k] = v
 	}
 	return result
+}
+
+// IsBlocked checks if an IP is currently blocked
+func (d *Detector) IsBlocked(ip string) bool {
+	d.statsMutex.RLock()
+	defer d.statsMutex.RUnlock()
+	if stats, exists := d.peerStats[ip]; exists {
+		return !stats.BlockedUntil.IsZero() && time.Now().Before(stats.BlockedUntil)
+	}
+	return false
 }
