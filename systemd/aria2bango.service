@@ -1,0 +1,33 @@
+[Unit]
+Description=Aria2 Bango - BT Leecher Blocker
+Documentation=https://github.com/lbls/aria2bango
+After=network.target aria2.service
+Wants=aria2.service
+
+[Service]
+Type=simple
+# Run as root to manage nftables
+# Alternatively, use capabilities: setcap cap_net_admin+ep /usr/local/bin/aria2bango
+User=root
+Group=root
+ExecStart=/usr/local/bin/aria2bango -config /etc/aria2bango/config.yaml
+ExecStopPost=/usr/local/bin/aria2bango -cleanup
+Restart=on-failure
+RestartSec=5s
+
+# Security settings
+NoNewPrivileges=false
+# Required for nftables access
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+
+# Resource limits
+LimitNOFILE=65535
+TasksMax=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aria2bango
+
+[Install]
+WantedBy=multi-user.target

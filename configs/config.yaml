@@ -1,0 +1,40 @@
+# aria2bango configuration file
+
+# aria2 RPC configuration
+aria2:
+  host: "127.0.0.1"
+  port: 6800
+  secret: ""              # RPC secret token (optional)
+  poll_interval: 10s      # How often to check for new peers
+
+# Detection rules
+detection:
+  # Behavior analysis settings
+  behavior:
+    enabled: true
+    # Minimum share ratio (peer's upload / peer's download) before flagging as leecher
+    # A low share ratio means the peer downloads a lot but uploads little
+    # Default: 0.1 (peer uploads 1 byte for every 10 bytes downloaded)
+    min_share_ratio: 0.1
+    # Minimum uploaded bytes before behavior analysis kicks in
+    # This prevents false positives from short-lived connections
+    min_data_threshold: 10485760  # 10MB
+
+# Blocking settings
+blocking:
+  # Base block duration - cumulative punishment is applied
+  # 1st violation: 1 * base_duration
+  # 2nd violation: 2 * base_duration
+  # 3rd violation: 3 * base_duration
+  # and so on...
+  base_duration: 5m
+  # nftables table name
+  nft_table: "aria2bango"
+
+# Logging settings
+logging:
+  level: "info"
+  file: "/var/log/aria2bango/blocked.log"
+  max_size: 100        # Max log file size in MB
+  max_backups: 3       # Max number of old log files to keep
+  max_age: 30          # Max days to keep old log files
